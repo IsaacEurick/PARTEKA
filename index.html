@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parteka Terraplanagens - Sistema de Gestão</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- TELA DE AUTENTICAÇÃO (LOGIN / CADASTRO) -->
+    <div id="auth-container" class="auth-container">
+        <div class="auth-card">
+            <div class="logo-area">
+                <h2>PARTEKA</h2>
+                <p>Terraplanagens - Sistema Interno</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button id="tab-login" class="active" onclick="switchTab('login')">Entrar</button>
+                <button id="tab-register" onclick="switchTab('register')">Cadastrar</button>
+            </div>
+
+            <!-- Formulário de Login -->
+            <form id="login-form" onsubmit="fazerLogin(event)" autocomplete="off">
+                <div class="input-group">
+                    <label>ID:</label>
+                    <input type="number" id="login-id" placeholder="Ex: 1" oninput="preencherPorId()" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>Nome:</label>
+                    <input type="text" id="login-nome" placeholder="Seu nome" oninput="preencherPorNome()" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>Senha:</label>
+                    <input type="password" id="login-senha" placeholder="Sua senha" autocomplete="new-password" required>
+                </div>
+                <button type="submit" class="btn-primary">Entrar no Sistema</button>
+            </form>
+
+            <!-- Formulário de Cadastro -->
+            <form id="register-form" class="hidden" onsubmit="fazerCadastro(event)" autocomplete="off">
+                <div class="input-group">
+                    <label>Nome Completo:</label>
+                    <input type="text" id="reg-nome" placeholder="Seu nome completo" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>CPF:</label>
+                    <input type="text" id="reg-cpf" placeholder="000.000.000-00" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>Criar Senha:</label>
+                    <input type="password" id="reg-senha" placeholder="Crie uma senha" required autocomplete="new-password">
+                </div>
+                <button type="submit" class="btn-primary">Solicitar Cadastro</button>
+            </form>
+
+            <!-- Botão de Recarregar / Sincronizar na Tela de Login -->
+            <div style="margin-top: 15px; text-align: center;">
+                <button type="button" onclick="recarregarDadosLogin()" class="btn-sync-login">
+                    🔄 Atualizar / Sincronizar Dados da Nuvem
+                </button>
+                <div id="login-sync-status" style="font-size: 12px; color: var(--text-muted); margin-top: 8px; min-height: 15px;"></div>
+            </div>
+
+            <p id="auth-msg" class="auth-msg"></p>
+        </div>
+    </div>
+
+    <!-- TELA DE AGUARDANDO APROVAÇÃO -->
+    <div id="waiting-container" class="hidden waiting-container">
+        <div class="auth-card" style="text-align: center;">
+            <h2>Olá, <span id="waiting-name"></span>!</h2>
+            <p>Seu cadastro (ID: <span id="waiting-id"></span>) foi realizado com sucesso.</p>
+            <p style="color: #f59e0b; margin: 20px 0;">⏳ Aguardando liberação do Administrador (Dono) para acessar o sistema.</p>
+            <button onclick="fazerLogout()" class="btn-secondary">Sair / Trocar Usuário</button>
+        </div>
+    </div>
+
+    <!-- PAINEL PRINCIPAL DO SISTEMA -->
+    <div id="app-container" class="hidden app-container">
+        
+        <!-- Barra Lateral (Sidebar) com o Botão Fixo de Sincronização -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>PARTEKA</h2>
+                <p>Gestão Interna</p>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li class="active" onclick="mudarAbaPainel('inicio')">🏠 Início</li>
+                <li id="menu-adm" onclick="mudarAbaPainel('adm-painel')">👥 Pessoas & Cadastros</li>
+                <li id="menu-veiculos" onclick="mudarAbaPainel('veiculos')">🚜 Veículos / Máquinas</li>
+                <li id="menu-combustivel" onclick="mudarAbaPainel('combustivel')">⛽ Controle de Combustível</li>
+                <li id="menu-postos" onclick="mudarAbaPainel('postos')">⛽ Postos</li>
+                <li id="menu-resumo" onclick="mudarAbaPainel('resumo')">📊 Resumo Geral</li>
+            </ul>
+
+            <!-- BOTÃO FIXO DE ATUALIZAÇÃO NA SIDEBAR -->
+            <div style="margin: 15px 0;">
+                <button onclick="sincronizarManualNuvem()" class="btn-sync-sidebar">
+                    🔄 Atualizar Dados
+                </button>
+                <div id="sync-status" style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 5px; min-height: 15px;"></div>
+            </div>
+
+            <div class="sidebar-footer">
+                <p>Logado como: <strong id="user-display-name"></strong></p>
+                <p>ID: <span id="user-display-id"></span> | <span id="user-display-cargo"></span></p>
+                <button onclick="fazerLogout()" class="btn-logout">Sair</button>
+            </div>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <main class="main-content">
+            
+            <section id="section-inicio" class="panel-section">
+                <h1>Bem-vindo ao Sistema, <span id="welcome-name"></span>!</h1>
+                <p>Utilize o menu lateral para navegar entre os cadastros e relatórios.</p>
+            </section>
+
+            <section id="section-adm-painel" class="panel-section hidden">
+                <div style="margin-bottom: 15px;">
+                    <h2>Gerenciamento de Pessoas e Cadastros</h2>
+                    <p>Aprove novos funcionários ou altere cargos e permissões.</p>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Cargo / Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="section-veiculos" class="panel-section hidden">
+                <h2>Cadastro de Veículos e Máquinas</h2>
+                <form onsubmit="adicionarVeiculo(event)" class="inline-form">
+                    <input type="text" id="veiculo-modelo" placeholder="Modelo (Ex: Escavadeira PC200)" required>
+                    <input type="text" id="veiculo-placa" placeholder="Placa ou Identificação" required>
+                    <button type="submit" class="btn-primary">Cadastrar Veículo</button>
+                </form>
+                <div class="table-responsive" style="margin-top: 20px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th>Placa / ID</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="veiculos-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="section-combustivel" class="panel-section hidden">
+                <h2>Controle de Combustível e Gastos no Posto</h2>
+                <form onsubmit="adicionarCombustivel(event)" class="card-form">
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label>Tipo de Lançamento:</label>
+                            <select id="fuel-tipo" onchange="verificarTipoLancamento()">
+                                <option value="Abastecimento">Abastecimento</option>
+                                <option value="Troca de Óleo">Troca de Óleo</option>
+                                <option value="Filtros">Filtros</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Data:</label>
+                            <input type="date" id="fuel-data" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label>Veículo / Máquina:</label>
+                            <input type="text" id="fuel-veiculo" list="lista-veiculos" placeholder="Selecione ou digite o veículo" required>
+                            <datalist id="lista-veiculos"></datalist>
+                        </div>
+                        <div class="input-group">
+                            <label>Posto:</label>
+                            <input type="text" id="fuel-posto" list="lista-postos" placeholder="Selecione o posto">
+                            <datalist id="lista-postos"></datalist>
+                        </div>
+                    </div>
+                    <div class="form-row" id="div-tipo-combustivel">
+                        <div class="input-group">
+                            <label>Tipo de Combustível:</label>
+                            <select id="fuel-combustivel">
+                                <option value="Diesel S10">Diesel S10</option>
+                                <option value="Diesel S500">Diesel S500</option>
+                                <option value="Gasolina">Gasolina</option>
+                                <option value="Etanol">Etanol</option>
+                                <option value="Arla 32">Arla 32</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="input-group" id="div-litros">
+                            <label>Quantidade (litros):</label>
+                            <input type="number" min="0" max="99999999.999" step="0.001" id="fuel-litros" placeholder="Ex: 1500.000">
+                        </div>
+                        <div class="input-group" id="div-valor-litro">
+                            <label>Valor por litro (R$):</label>
+                            <input type="number" min="0" max="999999.9999" step="0.0001" id="fuel-valor-litro" placeholder="Ex: 6.2500">
+                        </div>
+                        <div class="input-group">
+                            <label>Valor Total (R$):</label>
+                            <input type="number" min="0" max="999999999.99" step="0.01" id="fuel-valor" placeholder="0.00" required>
+                            <small id="fuel-calculo-ajuda" class="field-help">Calculado automaticamente: litros × valor por litro.</small>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Observações / Descrição:</label>
+                        <input type="text" id="fuel-obs" placeholder="Ex: Nota fiscal, serviço realizado...">
+                    </div>
+                    <button type="submit" class="btn-primary">Registrar Lançamento</button>
+                </form>
+
+                <div class="table-responsive" style="margin-top: 25px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Data</th>
+                                <th>Veículo</th>
+                                <th>Posto</th>
+                                <th>Combustível</th>
+                                <th>Litros</th>
+                                <th>Valor/Litro</th>
+                                <th>Valor Total</th>
+                                <th>Obs</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fuel-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="section-postos" class="panel-section hidden">
+                <h2>Gerenciamento de Postos</h2>
+                <form onsubmit="adicionarPosto(event)" class="card-form posto-form">
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="posto-cnpj">CNPJ:</label>
+                            <input type="text" id="posto-cnpj" placeholder="00.000.000/0000-00" maxlength="18" inputmode="numeric" onblur="consultarCNPJPosto()">
+                            <small class="field-help">Digite o CNPJ para buscar os dados cadastrais.</small>
+                            <small id="posto-cnpj-status" class="field-help" aria-live="polite"></small>
+                        </div>
+                        <div class="input-group">
+                            <label for="posto-razao-social">Razão social:</label>
+                            <input type="text" id="posto-razao-social" placeholder="Razão social da empresa" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="posto-nome">Nome fantasia / Nome do posto:</label>
+                            <input type="text" id="posto-nome" placeholder="Nome conhecido do posto" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="posto-cidade">Cidade / UF:</label>
+                            <input type="text" id="posto-cidade" placeholder="Cidade / Estado" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary">Cadastrar Posto</button>
+                </form>
+                <div class="table-responsive" style="margin-top: 20px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>CNPJ</th>
+                                <th>Razão Social</th>
+                                <th>Nome do Posto</th>
+                                <th>Cidade</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="postos-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="section-resumo" class="panel-section hidden">
+                <h2>Resumo Geral e Relatórios</h2>
+                
+                <div class="filter-box">
+                    <div class="input-group">
+                        <label>Período:</label>
+                        <select id="filtro-tipo-periodo" onchange="alternarCamposPeriodo()">
+                            <option value="todos">Todo o Período</option>
+                            <option value="diario">Data Específica</option>
+                            <option value="mensal">Mês Específico</option>
+                            <option value="anual">Ano Específico</option>
+                        </select>
+                    </div>
+                    <div class="input-group hidden" id="grupo-data-especifica">
+                        <label>Data:</label>
+                        <input type="date" id="filtro-data" onchange="aplicarFiltrosResumo()">
+                    </div>
+                    <div class="input-group hidden" id="grupo-mes-ano">
+                        <label>Mês:</label>
+                        <input type="month" id="filtro-mes" onchange="aplicarFiltrosResumo()">
+                    </div>
+                    <div class="input-group hidden" id="grupo-ano">
+                        <label>Ano (Ex: 2026):</label>
+                        <input type="number" id="filtro-ano" placeholder="2026" oninput="aplicarFiltrosResumo()">
+                    </div>
+                    <div class="input-group">
+                        <label>Veículo:</label>
+                        <select id="filtro-veiculo-select" onchange="aplicarFiltrosResumo()">
+                            <option value="">Todos os Veículos</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Posto:</label>
+                        <select id="filtro-posto-select" onchange="aplicarFiltrosResumo()">
+                            <option value="">Todos os Postos</option>
+                        </select>
+                    </div>
+                    <button onclick="limparFiltrosResumo()" class="btn-secondary" style="align-self: flex-end; height: 42px;">Limpar Filtros</button>
+                </div>
+
+                <div class="cards-grid">
+                    <div class="card-metric">
+                        <h3>Total de Litros</h3>
+                        <p id="card-total-litros">0.00 L</p>
+                    </div>
+                    <div class="card-metric">
+                        <h3>Gasto Total</h3>
+                        <p id="card-total-valor">R$ 0,00</p>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 30px;">Consumo por Veículo</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Veículo / Máquina</th>
+                                <th>Total de Litros</th>
+                                <th>Valor Gasto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resumo-veiculos-body"></tbody>
+                    </table>
+                </div>
+
+                <h3 style="margin-top: 30px;">Gastos por Posto</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Posto</th>
+                                <th>Total de Litros</th>
+                                <th>Valor Gasto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resumo-postos-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
